@@ -16,13 +16,14 @@ namespace WebApiAutores.Controllers
         private readonly IMapper mapper;
 
         public AutoresController(ApplicationDbContext context, IMapper mapper)
-        { 
+        {
             this.context = context;
             this.mapper = mapper;
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<AutorDto>>> Get() {
+        public async Task<ActionResult<List<AutorDto>>> Get()
+        {
 
             var autores = await context.Autores.ToListAsync();
             return mapper.Map<List<AutorDto>>(autores);
@@ -38,19 +39,22 @@ namespace WebApiAutores.Controllers
         }
 
         [HttpGet("{nombre}")]
-        public async Task<ActionResult<List<AutorDto>>> Get([FromRoute] string nombre)
+        public async Task<ActionResult<List<AutorDTOConLibros>>> Get([FromRoute] string nombre)
         {
 
-            var autores = await context.Autores.Where( autorDB => autorDB.Nombre.Contains(nombre) ).ToListAsync();
+            var autores = await context.Autores.Where(autorDB => autorDB.Nombre.Contains(nombre)).ToListAsync();
 
-            return mapper.Map<List<AutorDto>>(autores);
+            return mapper.Map<List<AutorDTOConLibros>>(autores);
 
         }
 
-        [HttpGet("{id:int}")]
+        [HttpGet("{id:int}", Name = "obtenerAutor")]
         public async Task<ActionResult<AutorDto>> PrimerAutor(int id)
         {
-            var autor = await context.Autores.FirstOrDefaultAsync(x => x.Id == id);
+            var autor = await context.Autores
+                .Include(autorDB => autorDB.AutorLibro)
+                .ThenInclude(autorLibroDB => autorLibroDB.Libro)
+                .FirstOrDefaultAsync(x => x.Id == id);
 
             if (autor == null)
             {
@@ -61,7 +65,7 @@ namespace WebApiAutores.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult> Post([FromBody] CreateAutorDTO createAutorDTO) 
+        public async Task<ActionResult> Post([FromBody] CreateAutorDTO createAutorDTO)
         {
             var exiteAutorConElMismoNombre = await context.Autores.AnyAsync(x => x.Nombre == createAutorDTO.Nombre);
 
@@ -74,11 +78,14 @@ namespace WebApiAutores.Controllers
 
             context.Add(autor);
             await context.SaveChangesAsync();
-            return Ok();
+
+            var autorDto = mapper.Map<AutorDto>(autor);
+
+            return CreatedAtRoute("obtenerAutor", new { id = autor.Id }, autorDto);
         }
 
         [HttpPut("{id:int}")]
-        public async Task<ActionResult> Put(int id, [FromBody] Autor autor)
+        public async Task<ActionResult> Put(int id, [FromBody] CreateAutorDTO createAutorDTO)
         {
             var existeAutor = await context.Autores.AnyAsync(x => x.Id == id);
 
@@ -87,9 +94,12 @@ namespace WebApiAutores.Controllers
                 return NotFound();
             }
 
+            var autor = mapper.Map<Autor>(createAutorDTO);
+            autor.Id = id;
+
             context.Update(autor);
             await context.SaveChangesAsync();
-            return Ok();
+            return NoContent();
         }
 
         [HttpDelete("{id:int}")]

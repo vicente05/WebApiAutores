@@ -11,8 +11,6 @@ namespace WebApiAutores.Entitys
         [Required(ErrorMessage = "el campo {0} es requerido")]
         [PrimeraLetraMayuscula]
         public string Nombre { get; set; }
-
-    
-       
+        public List<AutorLibro> AutorLibro { get; set; }
     }
 }
