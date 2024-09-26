@@ -1,9 +1,9 @@
-﻿using AutoMapper;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApiAutores.Dto;
 using WebApiAutores.Entitys;
-using WebApiAutores.Filters;
+using Microsoft.Extensions.Configuration;
+using AutoMapper;
 
 namespace WebApiAutores.Controllers
 {
@@ -14,11 +14,13 @@ namespace WebApiAutores.Controllers
 
         private readonly ApplicationDbContext context;
         private readonly IMapper mapper;
+        private readonly IConfiguration configuration;
 
-        public AutoresController(ApplicationDbContext context, IMapper mapper)
+        public AutoresController(ApplicationDbContext context, IMapper mapper, IConfiguration configuration)
         {
             this.context = context;
             this.mapper = mapper;
+            this.configuration = configuration;
         }
 
         [HttpGet]
@@ -28,6 +30,13 @@ namespace WebApiAutores.Controllers
             var autores = await context.Autores.ToListAsync();
             return mapper.Map<List<AutorDto>>(autores);
 
+        }
+
+        [HttpGet("configuraciones")]
+        public ActionResult<string> ObtenerConfiguracion()
+        {
+
+            return configuration["apellido"];
         }
 
         [HttpGet("primero")]
