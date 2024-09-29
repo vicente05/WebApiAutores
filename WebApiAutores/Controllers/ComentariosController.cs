@@ -1,4 +1,8 @@
+using System.Security.Claims;
 using AutoMapper;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApiAutores.Dto;
@@ -13,12 +17,19 @@ namespace WebApiAutores.Controllers
         private readonly ILogger<ComentariosController> logger;
         private readonly ApplicationDbContext dbContext;
         private readonly IMapper mapper;
+        private readonly UserManager<IdentityUser> userManager;
 
-        public ComentariosController(ILogger<ComentariosController> logger, ApplicationDbContext dbContext, IMapper mapper)
+        public ComentariosController(
+            ILogger<ComentariosController> logger,
+            ApplicationDbContext dbContext,
+            IMapper mapper,
+            UserManager<IdentityUser> userManager
+        )
         {
             this.logger = logger;
             this.dbContext = dbContext;
             this.mapper = mapper;
+            this.userManager = userManager;
         }
 
         [HttpGet]
@@ -54,8 +65,12 @@ namespace WebApiAutores.Controllers
 
 
         [HttpPost]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<ActionResult> Post(int libroId, [FromBody] CreateComentarioDTO createComentarioDTO)
         {
+            var emailClaim = HttpContext.User.Claims.Where(claim => claim.Type == "email").FirstOrDefault();
+            var email = emailClaim.Value;
+            var usuario = await userManager.FindByEmailAsync(email);
             var existeLibro = await dbContext.Libros.AnyAsync(libroDB => libroDB.Id == libroId);
 
             if (!existeLibro)
@@ -65,6 +80,7 @@ namespace WebApiAutores.Controllers
 
             var comentario = mapper.Map<Comentario>(createComentarioDTO);
             comentario.LibroId = libroId;
+            comentario.UsuarioId = usuario.Id;
             dbContext.Add(comentario);
             await dbContext.SaveChangesAsync();
 

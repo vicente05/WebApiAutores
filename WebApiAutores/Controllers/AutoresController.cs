@@ -4,11 +4,14 @@ using WebApiAutores.Dto;
 using WebApiAutores.Entitys;
 using Microsoft.Extensions.Configuration;
 using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace WebApiAutores.Controllers
 {
     [Route("api/autores")]
     [ApiController]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Policy = "EsAdmin")]
     public class AutoresController : ControllerBase
     {
 
@@ -24,19 +27,13 @@ namespace WebApiAutores.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<ActionResult<List<AutorDto>>> Get()
         {
 
             var autores = await context.Autores.ToListAsync();
             return mapper.Map<List<AutorDto>>(autores);
 
-        }
-
-        [HttpGet("configuraciones")]
-        public ActionResult<string> ObtenerConfiguracion()
-        {
-
-            return configuration["apellido"];
         }
 
         [HttpGet("primero")]
