@@ -5,9 +5,9 @@ using WebApiAutores.Dto;
 using WebApiAutores.Entitys;
 using Microsoft.AspNetCore.JsonPatch;
 
-namespace WebApiAutores.Controllers
+namespace WebApiAutores.Controllers.V1
 {
-    [Route("api/libros")]
+    [Route("api/v1/libros")]
     [ApiController]
     public class LibrosController : ControllerBase
     {
@@ -40,7 +40,7 @@ namespace WebApiAutores.Controllers
             return mapper.Map<LibroDTOConAutores>(libro);
         }
 
-        [HttpPost]
+        [HttpPost(Name = "CrearLibro")]
         public async Task<ActionResult> Post(CreateLibroDTO createLibroDTO)
         {
 
@@ -71,7 +71,7 @@ namespace WebApiAutores.Controllers
             return CreatedAtRoute("ObtenerLibro", new { id = libro.Id }, libroDTO);
         }
 
-        [HttpPut("{id:int}")]
+        [HttpPut("{id:int}", Name = "ActualizarLibro")]
         public async Task<ActionResult> Put(int id, CreateLibroDTO createLibroDTO)
         {
             var libroDB = await context.Libros
@@ -102,7 +102,7 @@ namespace WebApiAutores.Controllers
             }
         }
 
-        [HttpPatch("{id:int}")]
+        [HttpPatch("{id:int}", Name = "PatchLibro")]
         public async Task<ActionResult> Patch(int id, JsonPatchDocument<LibroPatchDTO> patchDocument)
         {
             if (patchDocument == null)
@@ -136,7 +136,7 @@ namespace WebApiAutores.Controllers
 
         }
 
-        [HttpDelete("{id:int}")]
+        [HttpDelete("{id:int}", Name = "BorrarLibro")]
         public async Task<ActionResult> Delete(int id)
         {
             var existeAutor = await context.Libros.AnyAsync(x => x.Id == id);

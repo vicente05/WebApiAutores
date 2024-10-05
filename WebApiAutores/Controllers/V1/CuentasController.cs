@@ -1,11 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
 using System.Text;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -16,10 +11,10 @@ using Microsoft.IdentityModel.Tokens;
 using WebApiAutores.Dto;
 using WebApiAutores.Servicios;
 
-namespace WebApiAutores.Controllers
+namespace WebApiAutores.Controllers.V1
 {
     [ApiController]
-    [Route("api/cuentas")]
+    [Route("api/v1/cuentas")]
     public class CuentasController : ControllerBase
     {
         private readonly ILogger<CuentasController> _logger;
@@ -47,56 +42,7 @@ namespace WebApiAutores.Controllers
         }
 
 
-        [HttpGet("{textoPlano}")]
-        public ActionResult RealizarHash(string textoPlano)
-        {
-            var resultado = hashServices.Hash(textoPlano);
-            var resultado2 = hashServices.Hash(textoPlano);
-
-            return Ok(new
-            {
-                textoPlano,
-                Hash1 = resultado,
-                Hash2 = resultado2
-            });
-        }
-
-
-        [HttpGet("Encriptar")]
-        public ActionResult Encriptar()
-        {
-            var textoPlano = "Vicente Marti";
-            var textoCifrado = dataProtector.Protect(textoPlano);
-            var textoDesencriptado = dataProtector.Unprotect(textoCifrado);
-
-            return Ok(new
-            {
-                textoPlano,
-                textoCifrado,
-                textoDesencriptado
-            });
-        }
-
-        [HttpGet("EncriptarPorTiempo")]
-        public ActionResult EncriptarPorTiempo()
-        {
-            var protectorLimitadoPorTiempo = dataProtector.ToTimeLimitedDataProtector();
-
-            var textoPlano = "Vicente Marti";
-            var textoCifrado = protectorLimitadoPorTiempo.Protect(textoPlano, lifetime: TimeSpan.FromSeconds(5));
-            Thread.Sleep(6000);
-            var textoDesencriptado = protectorLimitadoPorTiempo.Unprotect(textoCifrado);
-
-            return Ok(new
-            {
-                textoPlano,
-                textoCifrado,
-                textoDesencriptado
-            });
-        }
-
-
-        [HttpPost("registrar")]
+        [HttpPost("registrar", Name = "RegistrarUsuario")]
         public async Task<ActionResult<RespuesAutenticacion>> Registrar(CredencialesUsuario credenciales)
         {
             var usuario = new IdentityUser { UserName = credenciales.Email, Email = credenciales.Email };
@@ -110,7 +56,7 @@ namespace WebApiAutores.Controllers
             return await ConstruirToken(credenciales);
         }
 
-        [HttpPost("login")]
+        [HttpPost("login", Name = "LoginUsuario")]
         public async Task<ActionResult<RespuesAutenticacion>> Login(CredencialesUsuario credenciales)
         {
             var resultado = await signInManager.PasswordSignInAsync(credenciales.Email, credenciales.Password, isPersistent: false, lockoutOnFailure: false);
@@ -124,7 +70,7 @@ namespace WebApiAutores.Controllers
 
         }
 
-        [HttpGet("RenoverToken")]
+        [HttpGet("RenoverToken", Name = "RenovarToken")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<ActionResult<RespuesAutenticacion>> RenovarToken()
         {
@@ -166,7 +112,7 @@ namespace WebApiAutores.Controllers
             };
         }
 
-        [HttpPost("HacerAdmin")]
+        [HttpPost("HacerAdmin", Name = "HacerAdmin")]
         public async Task<ActionResult> HacerAdmin(EditarAdminDTO editarAdminDTO)
         {
             var usuario = await userManager.FindByEmailAsync(editarAdminDTO.Email);
@@ -174,7 +120,7 @@ namespace WebApiAutores.Controllers
             return NoContent();
         }
 
-        [HttpPost("RemoverAdmin")]
+        [HttpPost("RemoverAdmin", Name = "RemoverAdmin")]
         public async Task<ActionResult> RemoverAdmin(EditarAdminDTO editarAdminDTO)
         {
             var usuario = await userManager.FindByEmailAsync(editarAdminDTO.Email);
