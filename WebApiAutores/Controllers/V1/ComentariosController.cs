@@ -1,28 +1,39 @@
 using AutoMapper;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApiAutores.Dto;
 using WebApiAutores.Entitys;
+using WebApiAutores.Utilidades;
 
-namespace WebApiAutores.Controllers
+namespace WebApiAutores.Controllers.V1
 {
     [ApiController]
-    [Route("api/libros/{libroId:int}/comentarios")]
+    [Route("api/v1/libros/{libroId:int}/comentarios")]
     public class ComentariosController : Controller
     {
         private readonly ILogger<ComentariosController> logger;
         private readonly ApplicationDbContext dbContext;
         private readonly IMapper mapper;
+        private readonly UserManager<IdentityUser> userManager;
 
-        public ComentariosController(ILogger<ComentariosController> logger, ApplicationDbContext dbContext, IMapper mapper)
+        public ComentariosController(
+            ILogger<ComentariosController> logger,
+            ApplicationDbContext dbContext,
+            IMapper mapper,
+            UserManager<IdentityUser> userManager
+        )
         {
             this.logger = logger;
             this.dbContext = dbContext;
             this.mapper = mapper;
+            this.userManager = userManager;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<List<ComentarioDTO>>> Get(int libroId)
+        [HttpGet(Name = "ObtenerComentariosLibro")]
+        public async Task<ActionResult<List<ComentarioDTO>>> Get(int libroId, [FromQuery] PaginacionDTO paginacion)
         {
 
             var existeLibro = await dbContext.Libros.AnyAsync(libroDB => libroDB.Id == libroId);
@@ -32,7 +43,9 @@ namespace WebApiAutores.Controllers
                 return NotFound();
             }
 
-            var comentarios = await dbContext.Comentarios.Where(cometarioDB => cometarioDB.LibroId == libroId).ToListAsync();
+            var queryable = dbContext.Comentarios.Where(cometarioDB => cometarioDB.LibroId == libroId).AsQueryable();
+            await HttpContext.InsertarParametrosPaginacionEnCabecera(queryable);
+            var comentarios = await queryable.OrderBy(comentario => comentario.Id).Paginar(paginacion).ToListAsync();
 
             return mapper.Map<List<ComentarioDTO>>(comentarios);
         }
@@ -53,9 +66,13 @@ namespace WebApiAutores.Controllers
         }
 
 
-        [HttpPost]
+        [HttpPost(Name = "CrearComentario")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<ActionResult> Post(int libroId, [FromBody] CreateComentarioDTO createComentarioDTO)
         {
+            var emailClaim = HttpContext.User.Claims.Where(claim => claim.Type == "email").FirstOrDefault();
+            var email = emailClaim.Value;
+            var usuario = await userManager.FindByEmailAsync(email);
             var existeLibro = await dbContext.Libros.AnyAsync(libroDB => libroDB.Id == libroId);
 
             if (!existeLibro)
@@ -65,6 +82,7 @@ namespace WebApiAutores.Controllers
 
             var comentario = mapper.Map<Comentario>(createComentarioDTO);
             comentario.LibroId = libroId;
+            comentario.UsuarioId = usuario.Id;
             dbContext.Add(comentario);
             await dbContext.SaveChangesAsync();
 
@@ -74,7 +92,7 @@ namespace WebApiAutores.Controllers
 
         }
 
-        [HttpPut("{id:int}")]
+        [HttpPut("{id:int}", Name = "ActualizarComentario")]
         public async Task<ActionResult> Put(int libroId, int id, CreateComentarioDTO createComentarioDTO)
         {
             var existeLibro = await dbContext.Libros.AnyAsync(libroDB => libroDB.Id == libroId);

@@ -39,7 +39,7 @@ namespace WebApiAutores.Middleware
                 await ms.CopyToAsync(cuerpoOriginalRepuesta);
                 context.Response.Body = cuerpoOriginalRepuesta;
 
-                logger.LogInformation(repuesta);
+                //logger.LogInformation(repuesta);
 
             }
         }
